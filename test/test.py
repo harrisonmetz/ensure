@@ -9,8 +9,11 @@ import unittest
 import collections
 import copy
 import re
+import glob
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+path_loc = os.path.join(os.path.dirname(__file__), '..', 'build', 'lib.*')
+paths = glob.glob(path_loc)
+sys.path.insert(0, os.path.abspath(paths[0]))
 from ensure import *
 
 

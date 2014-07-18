@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
 import os, glob
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
 
 # install_requires = [line.rstrip() for line in open(os.path.join(os.path.dirname(__file__), "requirements.txt"))]
 install_requires = []
+
+ensurec = Extension('ensurec', sources=['ensure/ensurec.c'])
 
 setup(
     name='ensure',
@@ -30,5 +32,6 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Development Status :: 5 - Production/Stable',
         'Topic :: Software Development :: Libraries :: Python Modules'
-    ]
+    ],
+	ext_modules= [ensurec]
 )

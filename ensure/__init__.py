@@ -628,6 +628,26 @@ def _check_default_argument(f, arg, value):
             raise EnsureError(msg.format(arg=arg, f=f, t=templ))
 
 
+def check_args_python(args, kwargs, arg_properties, f):
+    for arg, templ, pos in arg_properties:
+        if pos is not None and len(args) > pos:
+            value = args[pos]
+        elif arg in kwargs:
+            value = kwargs[arg]
+        else:
+            continue
+
+        if not isinstance(value, templ):
+            msg = "Argument {arg} to {f} does not match annotation type {t}"
+            raise EnsureError(msg.format(arg=arg, f=f, t=templ))
+
+try:
+    from ensurec import check_args
+except ImportError:
+    #check_args = check_args_python
+    pass
+
+
 def ensure_annotations(f):
     """
     Decorator to be used on functions with annotations. Runs type checks to enforce annotations. Raises
@@ -650,6 +670,7 @@ def ensure_annotations(f):
 
         >>> ensure.EnsureError: Argument y to <function f at 0x109b7c710> does not match annotation type <class 'float'>
     """
+
     if f.__defaults__:
         for rpos, value in enumerate(f.__defaults__):
             pos = f.__code__.co_argcount - len(f.__defaults__) + rpos
@@ -678,17 +699,7 @@ def ensure_annotations(f):
 
     @wraps(f)
     def wrapper(*args, **kwargs):
-        for arg, templ, pos in arg_properties:
-            if pos is not None and len(args) > pos:
-                value = args[pos]
-            elif arg in kwargs:
-                value = kwargs[arg]
-            else:
-                continue
-
-            if not isinstance(value, templ):
-                msg = "Argument {arg} to {f} does not match annotation type {t}"
-                raise EnsureError(msg.format(arg=arg, f=f, t=templ))
+        check_args(args, kwargs, arg_properties, f)
 
         return_val = f(*args, **kwargs)
         if has_return_annotation:
