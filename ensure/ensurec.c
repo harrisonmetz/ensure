@@ -14,7 +14,7 @@ static PyObject* repr_to_bytes(PyObject* object)
 	return object_repr_bytes;
 }
 
-static PyObject* ensurec_check_args(PyObject* self, PyObject* args)
+static PyObject* ensurec_check_args_and_call(PyObject* self, PyObject* args)
 {
 	PyObject* posargs = NULL;
 	PyObject* kwargs = NULL;
@@ -98,11 +98,11 @@ static PyObject* ensurec_check_args(PyObject* self, PyObject* args)
 		}
 	}
 
-	Py_RETURN_NONE;
+	return PyObject_Call(target_function, posargs, kwargs);
 }
 
 static PyMethodDef ensurec_methods[] = {
-	{"check_args", ensurec_check_args, METH_VARARGS, "checks function parameters for the correct annotation"},
+	{"check_args_and_call", ensurec_check_args_and_call, METH_VARARGS, "checks function parameters for the correct annotation and calls it"},
 
 	{NULL, NULL, 0, NULL}
 };

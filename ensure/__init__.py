@@ -628,7 +628,7 @@ def _check_default_argument(f, arg, value):
             raise EnsureError(msg.format(arg=arg, f=f, t=templ))
 
 
-def check_args_python(args, kwargs, arg_properties, f):
+def check_args_and_call_python(args, kwargs, arg_properties, f):
     for arg, templ, pos in arg_properties:
         if pos is not None and len(args) > pos:
             value = args[pos]
@@ -641,10 +641,12 @@ def check_args_python(args, kwargs, arg_properties, f):
             msg = "Argument {arg} to {f} does not match annotation type {t}"
             raise EnsureError(msg.format(arg=arg, f=f, t=templ))
 
+    return f(*args, **kwargs)
+
 try:
-    from ensurec import check_args
+    from ensurec import check_args_and_call
 except ImportError:
-    check_args = check_args_python
+    check_args_and_call = check_args_and_call_python
 
 
 def ensure_annotations(f):
@@ -691,21 +693,20 @@ def ensure_annotations(f):
                 arg_properties.append((arg, templ, pos))
     from functools import wraps
 
-    has_return_annotation = False
     if 'return' in f.__annotations__:
-        has_return_annotation = True
         return_templ = f.__annotations__['return']
-
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        check_args(args, kwargs, arg_properties, f)
-
-        return_val = f(*args, **kwargs)
-        if has_return_annotation:
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            return_val = check_args_and_call(args, kwargs, arg_properties, f)
             if not isinstance(return_val, return_templ):
                 msg = "Return value of {f} does not match annotation type {t}"
                 raise EnsureError(msg.format(f=f, t=return_templ))
-        return return_val
+            return return_val
+    else:
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            return check_args_and_call(args, kwargs, arg_properties, f)
+
     return wrapper
 
 ensure = Ensure()
