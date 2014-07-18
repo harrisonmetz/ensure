@@ -644,8 +644,7 @@ def check_args_python(args, kwargs, arg_properties, f):
 try:
     from ensurec import check_args
 except ImportError:
-    #check_args = check_args_python
-    pass
+    check_args = check_args_python
 
 
 def ensure_annotations(f):
