@@ -14,26 +14,7 @@ static PyObject* repr_to_bytes(PyObject* object)
 	return object_repr_bytes;
 }
 
-static PyObject* ensurec_check_args_and_call(PyObject* self, PyObject* args)
-{
-	PyObject* posargs = NULL;
-	PyObject* kwargs = NULL;
-	PyObject* arg_properties = NULL;
-	PyObject* target_function = NULL;
-	if (!PyArg_ParseTuple(args, "OOOO", &posargs, &kwargs, &arg_properties, &target_function)) {
-		PyErr_SetString(PyExc_TypeError, "Must take args, kwargs, arg_properties, f");
-		return NULL;
-	} else if (!PyTuple_Check(posargs)) {
-		PyErr_SetString(PyExc_TypeError, "posargs is not a tuple");
-		return NULL;
-	} else if (!PyDict_Check(kwargs)) {
-		PyErr_SetString(PyExc_TypeError, "kwargs is not a dict");
-		return NULL;
-	} else if (!PyList_Check(arg_properties)) {
-		PyErr_SetString(PyExc_TypeError, "arg_properties is not a list");
-		return NULL;
-	}
-
+static PyObject* ensurec_check_args_and_call4(PyObject* posargs, PyObject* kwargs, PyObject* arg_properties, PyObject* target_function) {
 	const Py_ssize_t posargs_length = PyTuple_GET_SIZE(posargs);
 
 	Py_ssize_t i;
@@ -53,7 +34,9 @@ static PyObject* ensurec_check_args_and_call(PyObject* self, PyObject* args)
 			value = PyTuple_GET_ITEM(posargs, pos);
 		} else {
 			arg_name = PyTuple_GET_ITEM(arg_property, 0);
-			value = PyDict_GetItem(kwargs, arg_name);
+			if (kwargs != NULL) {
+				value = PyDict_GetItem(kwargs, arg_name);
+			}
 			if (value == NULL) {
 				continue;
 			}
@@ -101,6 +84,84 @@ static PyObject* ensurec_check_args_and_call(PyObject* self, PyObject* args)
 	return PyObject_Call(target_function, posargs, kwargs);
 }
 
+static PyObject* ensurec_check_args_and_call(PyObject* self, PyObject* args)
+{
+	PyObject* posargs = NULL;
+	PyObject* kwargs = NULL;
+	PyObject* arg_properties = NULL;
+	PyObject* target_function = NULL;
+	if (!PyArg_ParseTuple(args, "OOOO", &posargs, &kwargs, &arg_properties, &target_function)) {
+		PyErr_SetString(PyExc_TypeError, "Must take args, kwargs, arg_properties, f");
+		return NULL;
+	} else if (!PyTuple_Check(posargs)) {
+		PyErr_SetString(PyExc_TypeError, "posargs is not a tuple");
+		return NULL;
+	} else if (!PyDict_Check(kwargs)) {
+		PyErr_SetString(PyExc_TypeError, "kwargs is not a dict");
+		return NULL;
+	} else if (!PyList_Check(arg_properties)) {
+		PyErr_SetString(PyExc_TypeError, "arg_properties is not a list");
+		return NULL;
+	}
+
+	return ensurec_check_args_and_call4(posargs, kwargs, arg_properties, target_function);
+}
+
+typedef struct {
+	PyObject_HEAD
+	PyObject* arg_properties;
+	PyObject* target_function;
+} ensurec_WrappedFunctionObject;
+
+static int WrappedFunction_init(ensurec_WrappedFunctionObject* self, PyObject* args, PyObject** kwargs)
+{
+	PyObject* arg_properties = PyTuple_GetItem(args, 0);
+	if (arg_properties == NULL) {
+		return -1;
+	} else if (!PyList_Check(arg_properties)) {
+		PyErr_SetString(PyExc_TypeError, "arg_properties is not a list");
+		return -1;
+	}
+
+	PyObject* target_function = PyTuple_GetItem(args, 1);
+	if (target_function == NULL) {
+		return -1;
+	} else if (!PyCallable_Check(target_function)) {
+		PyErr_SetString(PyExc_TypeError, "target function isn not callable");
+		return -1;
+	}
+
+	Py_INCREF(arg_properties);
+	self->arg_properties = arg_properties;
+	Py_INCREF(target_function);
+	self->target_function = target_function;
+
+	return 0;
+}
+
+static void WrappedFunction_dealloc(ensurec_WrappedFunctionObject* self)
+{
+	Py_DECREF(self->target_function);
+	Py_DECREF(self->arg_properties);
+}
+
+static PyObject* WrappedFunction_call(ensurec_WrappedFunctionObject* self, PyObject* args, PyObject* kwargs)
+{
+	return ensurec_check_args_and_call4(args, kwargs, self->arg_properties, self->target_function);
+}
+
+static PyTypeObject ensurec_WrappedFunctionType = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	.tp_name = "ensurec.WrappedFunction",
+	.tp_basicsize = sizeof(ensurec_WrappedFunctionObject),
+	.tp_dealloc = (destructor) WrappedFunction_dealloc,
+	.tp_call = (ternaryfunc) WrappedFunction_call,
+	.tp_flags = Py_TPFLAGS_DEFAULT,
+	.tp_doc = "Wraps a function to ensure that the arguments passed / return meet the annotation",
+	.tp_new = PyType_GenericNew,
+	.tp_init = (initproc) WrappedFunction_init,
+};
+
 static PyMethodDef ensurec_methods[] = {
 	{"check_args_and_call", ensurec_check_args_and_call, METH_VARARGS, "checks function parameters for the correct annotation and calls it"},
 
@@ -109,10 +170,8 @@ static PyMethodDef ensurec_methods[] = {
 
 static void ensurec_module_free(void* object)
 {
-	if (ensure_error) {
-		Py_DECREF(ensure_error);
-		ensure_error = NULL;
-	}
+	Py_DECREF(&ensurec_WrappedFunctionType);
+	Py_DECREF(ensure_error);
 }
 
 static struct PyModuleDef ensurec_module = {
@@ -130,6 +189,11 @@ static struct PyModuleDef ensurec_module = {
 PyMODINIT_FUNC
 PyInit_ensurec(void)
 {
+	if (PyType_Ready(&ensurec_WrappedFunctionType) < 0) {
+		PyErr_SetString(PyExc_RuntimeError, "Could not register wrapped type");
+		return NULL;
+	}
+
 	PyObject* ensure = PyImport_ImportModule("ensure");
 	if (ensure == NULL) {
 		return NULL;
@@ -140,8 +204,16 @@ PyInit_ensurec(void)
 		Py_DECREF(ensure);
 		return NULL;
 	}
-	Py_INCREF(ensure_error);
 	Py_DECREF(ensure);
 
-	return PyModule_Create(&ensurec_module);
+	PyObject* module = PyModule_Create(&ensurec_module);
+	if (module == NULL) {
+		return NULL;
+	}
+
+	Py_INCREF(ensure_error);
+	Py_INCREF(&ensurec_WrappedFunctionType);
+	PyModule_AddObject(module, "WrappedFunction", (PyObject *)&ensurec_WrappedFunctionType);
+
+	return module;
 }
