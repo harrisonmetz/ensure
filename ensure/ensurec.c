@@ -141,13 +141,23 @@ static int WrappedFunction_init(ensurec_WrappedFunctionObject* self, PyObject* a
 
 static void WrappedFunction_dealloc(ensurec_WrappedFunctionObject* self)
 {
-	Py_DECREF(self->target_function);
-	Py_DECREF(self->arg_properties);
+	Py_XDECREF(self->target_function);
+	Py_XDECREF(self->arg_properties);
 }
 
 static PyObject* WrappedFunction_call(ensurec_WrappedFunctionObject* self, PyObject* args, PyObject* kwargs)
 {
 	return ensurec_check_args_and_call4(args, kwargs, self->arg_properties, self->target_function);
+}
+
+static PyObject* WrappedFunction_getattr(ensurec_WrappedFunctionObject* self, const char* attr_name)
+{
+	return PyObject_GetAttrString(self->target_function, attr_name);
+}
+
+static int WrappedFunction_setattr(ensurec_WrappedFunctionObject* self, const char* attr_name, PyObject* attr_value)
+{
+	return PyObject_SetAttrString(self->target_function, attr_name, attr_value);
 }
 
 static PyTypeObject ensurec_WrappedFunctionType = {
@@ -159,6 +169,8 @@ static PyTypeObject ensurec_WrappedFunctionType = {
 	.tp_flags = Py_TPFLAGS_DEFAULT,
 	.tp_doc = "Wraps a function to ensure that the arguments passed / return meet the annotation",
 	.tp_new = PyType_GenericNew,
+	.tp_getattr = (getattrfunc) WrappedFunction_getattr,
+	.tp_setattr = (setattrfunc) WrappedFunction_setattr,
 	.tp_init = (initproc) WrappedFunction_init,
 };
 
@@ -200,11 +212,10 @@ PyInit_ensurec(void)
 	}
 	PyObject* ensure_dict = PyModule_GetDict(ensure);
 	ensure_error = PyMapping_GetItemString(ensure_dict, "EnsureError");
+	Py_DECREF(ensure);
 	if (ensure_error == NULL) {
-		Py_DECREF(ensure);
 		return NULL;
 	}
-	Py_DECREF(ensure);
 
 	PyObject* module = PyModule_Create(&ensurec_module);
 	if (module == NULL) {

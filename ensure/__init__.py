@@ -649,7 +649,7 @@ class WrappedFunctionPython:
         return self.f(*args, **kwargs)
 
 try:
-    from ensurec import WrappedFunction
+    from ensurec import check_args_and_call, WrappedFunction
 except ImportError:
     WrappedFunction = WrappedFunctionPython
 
@@ -710,10 +710,7 @@ def ensure_annotations(f):
             return return_val
         return return_check_wrapper
     else:
-        @wraps(f)
-        def no_return_check_wrapper(*args, **kwargs):
-            return wrapper(*args, **kwargs)
-        return no_return_check_wrapper
+        return wrapper
 
 
 ensure = Ensure()
