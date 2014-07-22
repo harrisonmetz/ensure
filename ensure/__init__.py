@@ -629,9 +629,14 @@ def _check_default_argument(f, arg, value):
 
 
 class WrappedFunctionPython:
+    """
+    Wrapper for functions to check argument annotations
+    """
+
     def __init__(self, arg_properties, f):
         self.arg_properties = arg_properties
         self.f = f
+        self.__doc__ = f.__doc__
 
     def __call__(self, *args, **kwargs):
         for arg, templ, pos in self.arg_properties:
@@ -648,8 +653,11 @@ class WrappedFunctionPython:
 
         return self.f(*args, **kwargs)
 
+    def __getattr__(self, attr_name):
+        return getattr(self.f, attr_name)
+
 try:
-    from ensurec import check_args_and_call, WrappedFunction
+    from ensurec import WrappedFunction
 except ImportError:
     WrappedFunction = WrappedFunctionPython
 
