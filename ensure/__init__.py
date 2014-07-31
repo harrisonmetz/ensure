@@ -695,6 +695,11 @@ class WrappedFunctionReturn(WrappedFunction):
                 raise EnsureError(msg.format(f=self.f, t=self.return_templ))
         return return_val
 
+try:
+    from ensurec import WrappedFunction, WrappedFunctionReturn
+except ImportError:
+    pass
+
 
 def ensure_annotations(f):
     """

@@ -168,7 +168,7 @@ def h(x: str, y: int):
         with self.assertRaisesRegex(EnsureError, "Argument y to <function f at .+> does not match annotation type <class 'float'>"):
             self.assertEqual(f(y=2, x=1), 3.3)
         with self.assertRaisesRegex(EnsureError, "Return value of <function f at .+> does not match annotation type <class 'float'>"):
-            self.assertEqual(f(1, -2.3), 4)
+            self.assertEqual(f(1, -2.3), -1)
         with self.assertRaisesRegex(EnsureError, "Return value of <function f at .+> does not match annotation type <class 'float'>"):
             self.assertEqual(f(x=1, y=-2.3), 4)
 
