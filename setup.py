@@ -15,7 +15,7 @@ else:
 
 setup(
     name='ensure',
-    version='0.2.1',
+    version='0.2.2',
     url='https://github.com/kislyuk/ensure',
     license='Apache Software License',
     author='Andrey Kislyuk',
