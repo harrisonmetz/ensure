@@ -7,8 +7,10 @@ import re
 import functools
 from unittest.case import TestCase
 from collections import namedtuple, Mapping, Iterable
+import platform
 
 USING_PYTHON2 = True if sys.version_info < (3, 0) else False
+USE_CIMPLEMENTATION = platform.python_implementation() == 'CPython' and sys.version_info > (3, 2)
 
 __all__ = ['EnsureError', 'Ensure', 'Check', 'ensure', 'check', 'ensure_raises', 'ensure_raises_regex', 'ensure_annotations']
 
@@ -695,11 +697,8 @@ class WrappedFunctionReturn(WrappedFunction):
                 raise EnsureError(msg.format(f=self.f, t=self.return_templ))
         return return_val
 
-try:
+if USE_CIMPLEMENTATION:
     from ensurec import WrappedFunction, WrappedFunctionReturn
-except ImportError:
-    pass
-
 
 def ensure_annotations(f):
     """

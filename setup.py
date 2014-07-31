@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 
-import os, glob
+import os
+import sys
 from setuptools import setup, find_packages, Extension
 
 # install_requires = [line.rstrip() for line in open(os.path.join(os.path.dirname(__file__), "requirements.txt"))]
 install_requires = []
 
-ensurec = Extension('ensurec', sources=['ensure/ensurec.c'])
+if sys.version_info > (3, 2):
+    ensurec = Extension('ensurec', sources=['ensure/ensurec.c'])
+    ext_modules = [ensurec]
+else:
+    ext_modules = []
 
 setup(
     name='ensure',
@@ -18,7 +23,7 @@ setup(
     description='Literate BDD assertions in Python with no magic',
     long_description=open('README.rst').read(),
     install_requires=install_requires,
-    packages = find_packages(exclude=['test']),
+    packages=find_packages(exclude=['test']),
     include_package_data=True,
     platforms=['MacOS X', 'Posix'],
     classifiers=[
@@ -33,5 +38,5 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
-	ext_modules= [ensurec]
+    ext_modules=ext_modules
 )
